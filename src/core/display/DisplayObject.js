@@ -2,7 +2,9 @@ var math = require('../math'),
     RenderTexture = require('../textures/RenderTexture'),
     EventEmitter = require('eventemitter3'),
     CONST = require('../const'),
-    _tempMatrix = new math.Matrix();
+    _tempMatrix = new math.Matrix(),
+    _tempDisplayObjectParent = {worldTransform:new math.Matrix(), worldAlpha:1, children:[]};
+
 
 /**
  * The base class for all objects that are rendered on the screen.
@@ -19,21 +21,21 @@ function DisplayObject()
     /**
      * The coordinate of the object relative to the local coordinates of the parent.
      *
-     * @member {Point}
+     * @member {PIXI.Point}
      */
     this.position = new math.Point();
 
     /**
      * The scale factor of the object.
      *
-     * @member {Point}
+     * @member {PIXI.Point}
      */
     this.scale = new math.Point(1, 1);
 
     /**
      * The pivot point of the displayObject that it rotates around
      *
-     * @member {Point}
+     * @member {PIXI.Point}
      */
     this.pivot = new math.Point(0, 0);
 
@@ -70,7 +72,7 @@ function DisplayObject()
     /**
      * The display object container that contains this display object.
      *
-     * @member {Container}
+     * @member {PIXI.Container}
      * @readOnly
      */
     this.parent = null;
@@ -86,7 +88,7 @@ function DisplayObject()
     /**
      * Current transform of the object based on world (parent) factors
      *
-     * @member {Matrix}
+     * @member {PIXI.Matrix}
      * @readOnly
      */
     this.worldTransform = new math.Matrix();
@@ -95,7 +97,7 @@ function DisplayObject()
      * The area the filter is applied to. This is used as more of an optimisation
      * rather than figuring out the dimensions of the displayObject each frame you can set this rectangle
      *
-     * @member {Rectangle}
+     * @member {PIXI.Rectangle}
      */
     this.filterArea = null;
 
@@ -118,7 +120,7 @@ function DisplayObject()
     /**
      * The original, cached bounds of the object
      *
-     * @member {Rectangle}
+     * @member {PIXI.Rectangle}
      * @private
      */
     this._bounds = new math.Rectangle(0, 0, 1, 1);
@@ -126,7 +128,7 @@ function DisplayObject()
     /**
      * The most up-to-date bounds of the object
      *
-     * @member {Rectangle}
+     * @member {PIXI.Rectangle}
      * @private
      */
     this._currentBounds = null;
@@ -134,22 +136,10 @@ function DisplayObject()
     /**
      * The original, cached mask of the object
      *
-     * @member {Rectangle}
+     * @member {PIXI.Rectangle}
      * @private
      */
     this._mask = null;
-
-    //TODO rename to _isMask
-   // this.isMask = false;
-
-    /**
-     * Cached internal flag.
-     *
-     * @member {boolean}
-     * @private
-     */
-    this._cacheAsBitmap = false;
-    this._cachedObject = null;
 }
 
 // constructor
@@ -162,7 +152,7 @@ Object.defineProperties(DisplayObject.prototype, {
      * The position of the displayObject on the x axis relative to the local coordinates of the parent.
      *
      * @member {number}
-     * @memberof DisplayObject#
+     * @memberof PIXI.DisplayObject#
      */
     x: {
         get: function ()
@@ -179,7 +169,7 @@ Object.defineProperties(DisplayObject.prototype, {
      * The position of the displayObject on the y axis relative to the local coordinates of the parent.
      *
      * @member {number}
-     * @memberof DisplayObject#
+     * @memberof PIXI.DisplayObject#
      */
     y: {
         get: function ()
@@ -219,10 +209,10 @@ Object.defineProperties(DisplayObject.prototype, {
 
     /**
      * Sets a mask for the displayObject. A mask is an object that limits the visibility of an object to the shape of the mask applied to it.
-     * In PIXI a regular mask must be a PIXI.Graphics object. This allows for much faster masking in canvas as it utilises shape clipping.
+     * In PIXI a regular mask must be a PIXI.Graphics or a PIXI.Sprite object. This allows for much faster masking in canvas as it utilises shape clipping.
      * To remove a mask, set this property to null.
      *
-     * @member {Graphics}
+     * @member {PIXI.Graphics|PIXI.Sprite}
      * @memberof PIXI.DisplayObject#
      */
     mask: {
@@ -251,7 +241,7 @@ Object.defineProperties(DisplayObject.prototype, {
      * * IMPORTANT: This is a webGL only feature and will be ignored by the canvas renderer.
      * To remove filters simply set this property to 'null'
      *
-     * @member {Filter[]}
+     * @member {PIXI.AbstractFilter[]}
      * @memberof PIXI.DisplayObject#
      */
     filters: {
@@ -348,8 +338,8 @@ DisplayObject.prototype.displayObjectUpdateTransform = DisplayObject.prototype.u
  *
  * Retrieves the bounds of the displayObject as a rectangle object
  *
- * @param matrix {Matrix}
- * @return {Rectangle} the rectangular bounding area
+ * @param matrix {PIXI.Matrix}
+ * @return {PIXI.Rectangle} the rectangular bounding area
  */
 DisplayObject.prototype.getBounds = function (matrix) // jshint unused:false
 {
@@ -359,7 +349,7 @@ DisplayObject.prototype.getBounds = function (matrix) // jshint unused:false
 /**
  * Retrieves the local bounds of the displayObject as a rectangle object
  *
- * @return {Rectangle} the rectangular bounding area
+ * @return {PIXI.Rectangle} the rectangular bounding area
  */
 DisplayObject.prototype.getLocalBounds = function ()
 {
@@ -369,22 +359,35 @@ DisplayObject.prototype.getLocalBounds = function ()
 /**
  * Calculates the global position of the display object
  *
- * @param position {Point} The world origin to calculate from
- * @return {Point} A point object representing the position of this object
+ * @param position {PIXI.Point} The world origin to calculate from
+ * @return {PIXI.Point} A point object representing the position of this object
  */
 DisplayObject.prototype.toGlobal = function (position)
 {
+    // this parent check is for just in case the item is a root object.
+    // If it is we need to give it a temporary parent so that displayObjectUpdateTransform works correctly
+    // this is mainly to avoid a parent check in the main loop. Every little helps for performance :)
+    if(!this.parent)
+    {
+        this.parent = _tempDisplayObjectParent;
+        this.displayObjectUpdateTransform();
+        this.parent = null;
+    }
+    else
+    {
+        this.displayObjectUpdateTransform();
+    }
+
     // don't need to update the lot
-    this.displayObjectUpdateTransform();
     return this.worldTransform.apply(position);
 };
 
 /**
  * Calculates the local position of the display object relative to another point
  *
- * @param position {Point} The world origin to calculate from
- * @param [from] {DisplayObject} The DisplayObject to calculate the global position from
- * @return {Point} A point object representing the position of this object
+ * @param position {PIXI.Point} The world origin to calculate from
+ * @param [from] {PIXI.DisplayObject} The DisplayObject to calculate the global position from
+ * @return {PIXI.Point} A point object representing the position of this object
  */
 DisplayObject.prototype.toLocal = function (position, from)
 {
@@ -393,15 +396,28 @@ DisplayObject.prototype.toLocal = function (position, from)
         position = from.toGlobal(position);
     }
 
-    // don't need to update the lot
-    this.displayObjectUpdateTransform();
+    // this parent check is for just in case the item is a root object.
+    // If it is we need to give it a temporary parent so that displayObjectUpdateTransform works correctly
+    // this is mainly to avoid a parent check in the main loop. Every little helps for performance :)
+    if(!this.parent)
+    {
+        this.parent = _tempDisplayObjectParent;
+        this.displayObjectUpdateTransform();
+        this.parent = null;
+    }
+    else
+    {
+        this.displayObjectUpdateTransform();
+    }
+
+    // simply apply the matrix..
     return this.worldTransform.applyInverse(position);
 };
 
 /**
  * Renders the object using the WebGL renderer
  *
- * @param renderer {WebGLRenderer} The renderer
+ * @param renderer {PIXI.WebGLRenderer} The renderer
  * @private
  */
 DisplayObject.prototype.renderWebGL = function (renderer) // jshint unused:false
@@ -412,7 +428,7 @@ DisplayObject.prototype.renderWebGL = function (renderer) // jshint unused:false
 /**
  * Renders the object using the Canvas renderer
  *
- * @param renderer {CanvasRenderer} The renderer
+ * @param renderer {PIXI.CanvasRenderer} The renderer
  * @private
  */
 DisplayObject.prototype.renderCanvas = function (renderer) // jshint unused:false
@@ -423,10 +439,10 @@ DisplayObject.prototype.renderCanvas = function (renderer) // jshint unused:fals
  * Useful function that returns a texture of the display object that can then be used to create sprites
  * This can be quite useful if your displayObject is static / complicated and needs to be reused multiple times.
  *
- * @param renderer {CanvasRenderer|WebGLRenderer} The renderer used to generate the texture.
- * @param scaleMode {Number} See {@link SCALE_MODES} for possible values
- * @param resolution {Number} The resolution of the texture being generated
- * @return {Texture} a texture of the display object
+ * @param renderer {PIXI.CanvasRenderer|PIXI.WebGLRenderer} The renderer used to generate the texture.
+ * @param scaleMode {number} See {@link PIXI.SCALE_MODES} for possible values
+ * @param resolution {number} The resolution of the texture being generated
+ * @return {PIXI.Texture} a texture of the display object
  */
 DisplayObject.prototype.generateTexture = function (renderer, scaleMode, resolution)
 {
@@ -440,6 +456,23 @@ DisplayObject.prototype.generateTexture = function (renderer, scaleMode, resolut
     renderTexture.render(this, _tempMatrix);
 
     return renderTexture;
+};
+
+/**
+ * Set the parent Container of this DisplayObject
+ *
+ * @param container {Container} The Container to add this DisplayObject to
+ * @return {Container} The Container that this DisplayObject was added to
+ */
+DisplayObject.prototype.setParent = function (container)
+{
+    if (!container || !container.addChild)
+    {
+        throw new Error('setParent: Argument must be a Container');
+    }
+
+    container.addChild(this);
+    return container;
 };
 
 /**
