@@ -480,13 +480,17 @@ ParticleRenderer.prototype.uploadAlpha = function (children,startIndex, amount, 
  */
 ParticleRenderer.prototype.destroy = function ()
 {
-    if (this.renderer.gl) {
-        this.renderer.gl.deleteBuffer(this.indexBuffer);
+    // MJ: PIXI assumes the ParticleRenderer plugin is never disabled. Since we destroy it at an earlier stage in the
+    // PixiSurface we need to check here that it is still available before destroying it.
+    if (this.renderer) {
+        if (this.renderer.gl) {
+            this.renderer.gl.deleteBuffer(this.indexBuffer);
+        }
+
+        ObjectRenderer.prototype.destroy.apply(this, arguments);
+
+        this.shader.destroy();
     }
-
-    ObjectRenderer.prototype.destroy.apply(this, arguments);
-
-    this.shader.destroy();
 
     this.indices = null;
     this.tempMatrix = null;

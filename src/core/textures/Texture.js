@@ -261,6 +261,10 @@ Texture.prototype.destroy = function (destroyBase)
     this.crop = null;
 
     this.valid = false;
+
+    // MJ: Update and dispose events were never cleaned up!
+    this.off('dispose', this.dispose, this);
+    this.off('update', this.update, this);
 };
 
 Texture.prototype.clone = function ()
@@ -400,5 +404,3 @@ Texture.removeTextureFromCache = function (id)
 
     return texture;
 };
-
-Texture.EMPTY = new Texture(new BaseTexture());

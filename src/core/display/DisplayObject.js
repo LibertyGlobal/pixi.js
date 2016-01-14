@@ -277,7 +277,9 @@ DisplayObject.prototype.updateTransform = function ()
 {
 
     // create some matrix refs for easy access
-    var pt = this.parent.worldTransform;
+    if(this.parent) {
+        pt = this.parent.worldTransform;
+    }
     var wt = this.worldTransform;
 
     // temporary matrix variables
@@ -310,12 +312,14 @@ DisplayObject.prototype.updateTransform = function ()
         }
 
         // concat the parent matrix with the objects transform.
-        wt.a  = a  * pt.a + b  * pt.c;
-        wt.b  = a  * pt.b + b  * pt.d;
-        wt.c  = c  * pt.a + d  * pt.c;
-        wt.d  = c  * pt.b + d  * pt.d;
-        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+        if(pt) {
+            wt.a  = a  * pt.a + b  * pt.c;
+            wt.b  = a  * pt.b + b  * pt.d;
+            wt.c  = c  * pt.a + d  * pt.c;
+            wt.d  = c  * pt.b + d  * pt.d;
+            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+        }
     }
     else
     {
@@ -326,16 +330,22 @@ DisplayObject.prototype.updateTransform = function ()
         tx = this.position.x - this.pivot.x * a;
         ty = this.position.y - this.pivot.y * d;
 
-        wt.a  = a  * pt.a;
-        wt.b  = a  * pt.b;
-        wt.c  = d  * pt.c;
-        wt.d  = d  * pt.d;
-        wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-        wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+        if(pt) {
+            wt.a  = a  * pt.a;
+            wt.b  = a  * pt.b;
+            wt.c  = d  * pt.c;
+            wt.d  = d  * pt.d;
+            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+        }
     }
 
     // multiply the alphas..
-    this.worldAlpha = this.alpha * this.parent.worldAlpha;
+    if(this.parent) {
+        this.worldAlpha = this.alpha * this.parent.worldAlpha;
+    } else {
+        this.worldAlpha = this.alpha;
+    }
 
     // reset the bounds each time this is called!
     this._currentBounds = null;

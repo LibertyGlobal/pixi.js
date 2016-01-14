@@ -414,18 +414,23 @@ BaseTexture.fromImage = function (imageUrl, crossorigin, scaleMode)
  */
 BaseTexture.fromCanvas = function (canvas, scaleMode)
 {
-    if (!canvas._pixiId)
-    {
-        canvas._pixiId = 'canvas_' + utils.uuid();
-    }
+    // MJ: BaseTextures are not cached. Since we're using one canvas for multiple textuers PIXI will only take along the
+    // last update and thuys all textures will be the same.
 
-    var baseTexture = utils.BaseTextureCache[canvas._pixiId];
+    // if (!canvas._pixiId)
+    // {
+    //     canvas._pixiId = 'canvas_' + utils.uuid();
+    // }
 
-    if (!baseTexture)
-    {
-        baseTexture = new BaseTexture(canvas, scaleMode);
-        utils.BaseTextureCache[canvas._pixiId] = baseTexture;
-    }
+    // var baseTexture = utils.BaseTextureCache[canvas._pixiId];
 
-    return baseTexture;
+    // if (!baseTexture)
+    // {
+    //     baseTexture = new BaseTexture(canvas, scaleMode);
+    //     utils.BaseTextureCache[canvas._pixiId] = baseTexture;
+    // }
+
+    // return baseTexture;
+
+    return new BaseTexture(canvas, scaleMode);
 };

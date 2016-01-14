@@ -211,4 +211,10 @@ MeshRenderer.prototype.start = function ()
  */
 MeshRenderer.prototype.destroy = function ()
 {
+    // MJ: Destroy function of super class was never called here as well :(. Also PIXI assumes here that there always is
+    // MeshRenderer. We destroy it at an earlier stage in the PixiSurface since we don't need it, so PIXI needs to check
+    // that the MeshRenderer is still there before killing it.
+    if (this.renderer) {
+        ObjectRenderer.prototype.destroy.call(this);
+    }
 };

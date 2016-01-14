@@ -46,7 +46,7 @@ function SpriteRenderer(renderer)
      */
     this.size = CONST.SPRITE_BATCH_SIZE; // 2000 is a nice balance between mobile / desktop
 
-    // the total number of bytes in our batch
+    // the total number of bytes in our batch // 2000 x 4 x 20
     var numVerts = this.size * 4 * this.vertByteSize;
     // the total number of indices in our batch
     var numIndices = this.size * 6;
@@ -339,8 +339,9 @@ SpriteRenderer.prototype.flush = function ()
     }
     else
     {
-        var view = this.positions.subarray(0, this.currentBatchSize * this.vertByteSize);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, view);
+        //DC: don't do subarray, it triggers lots of GC pauses
+        //var view = this.positions.subarray(0, this.currentBatchSize * this.vertByteSize);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.positions);
     }
 
     var nextTexture, nextBlendMode, nextShader;
@@ -490,6 +491,8 @@ SpriteRenderer.prototype.destroy = function ()
 {
     this.renderer.gl.deleteBuffer(this.vertexBuffer);
     this.renderer.gl.deleteBuffer(this.indexBuffer);
+    // MJ: Destroy of super class was never called :(
+    ObjectRenderer.prototype.destroy.call(this);
 
     this.shader.destroy();
 

@@ -90,7 +90,7 @@ function Sprite(texture)
     this.cachedTint = 0xFFFFFF;
 
     // call texture setter
-    this.texture = texture || Texture.EMPTY;
+    this.texture = texture;
 }
 
 // constructor
@@ -159,7 +159,7 @@ Object.defineProperties(Sprite.prototype, {
             if (value)
             {
                 // wait for the texture to load
-                if (value.baseTexture.hasLoaded)
+                if (value.baseTexture && value.baseTexture.hasLoaded)
                 {
                     this._onTextureUpdate();
                 }
@@ -371,7 +371,7 @@ Sprite.prototype.containsPoint = function( point )
 */
 Sprite.prototype._renderCanvas = function (renderer)
 {
-    if (this.texture.crop.width <= 0 || this.texture.crop.height <= 0)
+    if (!this.texture.crop || this.texture.crop.width <= 0 || this.texture.crop.height <= 0)
     {
         return;
     }
@@ -515,7 +515,7 @@ Sprite.prototype.destroy = function (destroyTexture, destroyBaseTexture)
 
     this.anchor = null;
 
-    if (destroyTexture)
+    if (this._texture && destroyTexture)
     {
         this._texture.destroy(destroyBaseTexture);
     }

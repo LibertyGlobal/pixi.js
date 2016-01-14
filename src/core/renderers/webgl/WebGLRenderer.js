@@ -228,7 +228,7 @@ WebGLRenderer.prototype.render = function (object)
 
     this.drawCount = 0;
 
-    this._lastObjectRendered = object;
+    // this._lastObjectRendered = object;
 
     if(this._useFXAA)
     {
@@ -238,13 +238,13 @@ WebGLRenderer.prototype.render = function (object)
         object.filters = this._FXAAFilter;
     }
 
-    var cacheParent = object.parent;
-    object.parent = this._tempDisplayObjectParent;
+    //var cacheParent = object.parent;
+    //object.parent = this._tempDisplayObjectParent;
 
     // update the scene graph
     object.updateTransform();
 
-    object.parent = cacheParent;
+    //object.parent = cacheParent;
 
     var gl = this.gl;
 
@@ -310,6 +310,8 @@ WebGLRenderer.prototype.setObjectRenderer = function (objectRenderer)
     }
 
     this.currentRenderer.stop();
+    // MJ: Let's just hope we never need it again! O_o
+    this.currentRenderer.destroy();
     this.currentRenderer = objectRenderer;
     this.currentRenderer.start();
 };
@@ -423,7 +425,7 @@ WebGLRenderer.prototype.destroyTexture = function (texture)
         return;
     }
 
-    if (texture._glTextures[this.gl.id])
+    if (this.gl && texture._glTextures[this.gl.id])
     {
         this.gl.deleteTexture(texture._glTextures[this.gl.id]);
     }
@@ -480,11 +482,17 @@ WebGLRenderer.prototype.destroy = function (removeView)
     this.maskManager.destroy();
     this.stencilManager.destroy();
     this.filterManager.destroy();
+    // MJ: BlendModeManager was never destroyed!
+    this.blendModeManager.destroy();
 
     this.shaderManager = null;
     this.maskManager = null;
+    // MJ: Might as well null it...
+    this.stencilManager = null;
     this.filterManager = null;
     this.blendModeManager = null;
+    // MJ: Just in case...
+    this.currentRenderer = null;
 
     this.handleContextLost = null;
     this.handleContextRestored = null;
@@ -493,7 +501,28 @@ WebGLRenderer.prototype.destroy = function (removeView)
 
     this.drawCount = 0;
 
+    this.gl.useProgram(0);
+
     this.gl = null;
+};
+
+
+/**
+ * MJ: This is a DAWN specific function that cleans up remaining Sprite objects. Since we're not destroying the renderer
+ * when we exit VOD Sprite objects are left behind. This function checks whether the current renderer is the
+ * SpriteRenderer and in that case it removes all remaining Sprites and Textures.
+ */
+WebGLRenderer.prototype.cleanUp = function ()
+{
+    if (this.currentRenderer instanceof PIXI.SpriteRenderer) {
+        while (this.currentRenderer.sprites.length) {
+            this.currentRenderer.sprites.pop();
+        }
+
+        while (this.currentRenderer.textures.length) {
+            this.currentRenderer.textures.pop().destroy(true);
+        }
+    }
 };
 
 /**
