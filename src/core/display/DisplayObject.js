@@ -297,14 +297,15 @@ DisplayObject.prototype.updateTransform = function ()
             this.skew.x,
             this.skew.y
         );
-
+        if(pt) {
         // now concat the matrix (inlined so that we can avoid using copy)
-        wt.a  = _tempMatrix.a  * pt.a + _tempMatrix.b  * pt.c;
-        wt.b  = _tempMatrix.a  * pt.b + _tempMatrix.b  * pt.d;
-        wt.c  = _tempMatrix.c  * pt.a + _tempMatrix.d  * pt.c;
-        wt.d  = _tempMatrix.c  * pt.b + _tempMatrix.d  * pt.d;
-        wt.tx = _tempMatrix.tx * pt.a + _tempMatrix.ty * pt.c + pt.tx;
-        wt.ty = _tempMatrix.tx * pt.b + _tempMatrix.ty * pt.d + pt.ty;
+            wt.a  = _tempMatrix.a  * pt.a + _tempMatrix.b  * pt.c;
+            wt.b  = _tempMatrix.a  * pt.b + _tempMatrix.b  * pt.d;
+            wt.c  = _tempMatrix.c  * pt.a + _tempMatrix.d  * pt.c;
+            wt.d  = _tempMatrix.c  * pt.b + _tempMatrix.d  * pt.d;
+            wt.tx = _tempMatrix.tx * pt.a + _tempMatrix.ty * pt.c + pt.tx;
+            wt.ty = _tempMatrix.tx * pt.b + _tempMatrix.ty * pt.d + pt.ty;
+        }
     }
     else
     {
@@ -333,14 +334,15 @@ DisplayObject.prototype.updateTransform = function ()
                 tx -= this.pivot.x * a + this.pivot.y * c;
                 ty -= this.pivot.x * b + this.pivot.y * d;
             }
-
-            // concat the parent matrix with the objects transform.
-            wt.a  = a  * pt.a + b  * pt.c;
-            wt.b  = a  * pt.b + b  * pt.d;
-            wt.c  = c  * pt.a + d  * pt.c;
-            wt.d  = c  * pt.b + d  * pt.d;
-            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+            if(pt) {
+                // concat the parent matrix with the objects transform.
+                wt.a  = a  * pt.a + b  * pt.c;
+                wt.b  = a  * pt.b + b  * pt.d;
+                wt.c  = c  * pt.a + d  * pt.c;
+                wt.d  = c  * pt.b + d  * pt.d;
+                wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+                wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+            }
         }
         else
         {
@@ -350,53 +352,19 @@ DisplayObject.prototype.updateTransform = function ()
 
             tx = this.position.x - this.pivot.x * a;
             ty = this.position.y - this.pivot.y * d;
-
-            wt.a  = a  * pt.a;
-            wt.b  = a  * pt.b;
-            wt.c  = d  * pt.c;
-            wt.d  = d  * pt.d;
-            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+            if(pt) {
+                wt.a  = a  * pt.a;
+                wt.b  = a  * pt.b;
+                wt.c  = d  * pt.c;
+                wt.d  = d  * pt.d;
+                wt.tx = tx * pt.a + ty * pt.c + pt.tx;
+                wt.ty = tx * pt.b + ty * pt.d + pt.ty;
+            }
         }
-<<<<<<< HEAD
-
-        // concat the parent matrix with the objects transform.
-        if(pt) {
-            wt.a  = a  * pt.a + b  * pt.c;
-            wt.b  = a  * pt.b + b  * pt.d;
-            wt.c  = c  * pt.a + d  * pt.c;
-            wt.d  = c  * pt.b + d  * pt.d;
-            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
-        }
-    }
-    else
-    {
-        // lets do the fast version as we know there is no rotation..
-        a  = this.scale.x;
-        d  = this.scale.y;
-
-        tx = this.position.x - this.pivot.x * a;
-        ty = this.position.y - this.pivot.y * d;
-
-        if(pt) {
-            wt.a  = a  * pt.a;
-            wt.b  = a  * pt.b;
-            wt.c  = d  * pt.c;
-            wt.d  = d  * pt.d;
-            wt.tx = tx * pt.a + ty * pt.c + pt.tx;
-            wt.ty = tx * pt.b + ty * pt.d + pt.ty;
-        }
-=======
->>>>>>> master
     }
 
     // multiply the alphas..
-    if(this.parent) {
-        this.worldAlpha = this.alpha * this.parent.worldAlpha;
-    } else {
-        this.worldAlpha = this.alpha;
-    }
+    this.worldAlpha = this.alpha * this.parent.worldAlpha;
 
     // reset the bounds each time this is called!
     this._currentBounds = null;
