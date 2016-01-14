@@ -414,14 +414,3 @@ Texture.removeTextureFromCache = function (id)
 
     return texture;
 };
-<<<<<<< HEAD
-=======
-
-/**
- * An empty texture, used often to not have to create multiple empty textures.
- *
- * @static
- * @constant
- */
-Texture.EMPTY = new Texture(new BaseTexture());
->>>>>>> master
