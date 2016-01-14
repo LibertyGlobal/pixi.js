@@ -18,19 +18,19 @@ function WebGLGraphicsData(gl) {
     //TODO does this need to be split before uploding??
     /**
      * An array of color components (r,g,b)
-     * @member {Array}
+     * @member {number[]}
      */
     this.color = [0,0,0]; // color split!
 
     /**
      * An array of points to draw
-     * @member {Array}
+     * @member {PIXI.Point[]}
      */
     this.points = [];
 
     /**
      * The indices of the vertices
-     * @member {Array}
+     * @member {number[]}
      */
     this.indices = [];
     /**
@@ -99,13 +99,14 @@ WebGLGraphicsData.prototype.upload = function () {
 };
 
 WebGLGraphicsData.prototype.destroy = function () {
-    this.gl = null;
     this.color = null;
     this.points = null;
     this.indices = null;
 
     this.gl.deleteBuffer(this.buffer);
     this.gl.deleteBuffer(this.indexBuffer);
+    
+    this.gl = null;
 
     this.buffer = null;
     this.indexBuffer = null;

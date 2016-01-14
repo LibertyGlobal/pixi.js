@@ -14,26 +14,28 @@ var ObjectRenderer = require('../../renderers/webgl/utils/ObjectRenderer'),
  */
 
 /**
+ * Renderer dedicated to drawing and batching sprites.
  *
  * @class
  * @private
  * @memberof PIXI
  * @extends PIXI.ObjectRenderer
- * @param renderer {WebGLRenderer} The renderer this sprite batch works for.
+ * @param renderer {PIXI.WebGLRenderer} The renderer this sprite batch works for.
  */
 function SpriteRenderer(renderer)
 {
     ObjectRenderer.call(this, renderer);
 
     /**
-     *
+     * Number of values sent in the vertex buffer.
+     * positionX, positionY, colorR, colorG, colorB = 5
      *
      * @member {number}
      */
     this.vertSize = 5;
 
     /**
-     *
+     * The size of the vertex information in bytes.
      *
      * @member {number}
      */
@@ -46,46 +48,41 @@ function SpriteRenderer(renderer)
      */
     this.size = CONST.SPRITE_BATCH_SIZE; // 2000 is a nice balance between mobile / desktop
 
-    // the total number of bytes in our batch // 2000 x 4 x 20
-    var numVerts = this.size * 4 * this.vertByteSize;
-    // the total number of indices in our batch
+    // the total number of bytes in our batch
+    var numVerts = (this.size * 4) * this.vertByteSize;
+
+    // the total number of indices in our batch, there are 6 points per quad.
     var numIndices = this.size * 6;
 
     /**
-     * Holds the vertices
+     * Holds the vertex data that will be sent to the vertex shader.
      *
      * @member {ArrayBuffer}
      */
     this.vertices = new ArrayBuffer(numVerts);
 
     /**
-     * View on the vertices as a Float32Array
+     * View on the vertices as a Float32Array for positions
      *
      * @member {Float32Array}
      */
     this.positions = new Float32Array(this.vertices);
 
     /**
-     * Holds the color components
+     * View on the vertices as a Uint32Array for colors
      *
      * @member {Uint32Array}
      */
     this.colors = new Uint32Array(this.vertices);
 
     /**
-     * Holds the indices
+     * Holds the indices of the geometry (quads) to draw
      *
      * @member {Uint16Array}
      */
     this.indices = new Uint16Array(numIndices);
 
-    /**
-     *
-     *
-     * @member {number}
-     */
-    this.lastIndexCount = 0;
-
+    // fill the indices with the quads to draw
     for (var i=0, j=0; i < numIndices; i += 6, j += 4)
     {
         this.indices[i + 0] = j + 0;
@@ -97,61 +94,25 @@ function SpriteRenderer(renderer)
     }
 
     /**
-     *
-     *
-     * @member {boolean}
-     */
-    this.drawing = false;
-
-    /**
-     *
+     * The current size of the batch, each render() call adds to this number.
      *
      * @member {number}
      */
     this.currentBatchSize = 0;
 
     /**
+     * The current sprites in the batch.
      *
-     *
-     * @member {BaseTexture}
-     */
-    this.currentBaseTexture = null;
-
-    /**
-     *
-     *
-     * @member {Array}
-     */
-    this.textures = [];
-
-    /**
-     *
-     *
-     * @member {Array}
-     */
-    this.blendModes = [];
-
-    /**
-     *
-     *
-     * @member {Array}
-     */
-    this.shaders = [];
-
-    /**
-     *
-     *
-     * @member {Array}
+     * @member {PIXI.Sprite[]}
      */
     this.sprites = [];
 
     /**
      * The default shader that is used if a sprite doesn't have a more specific one.
      *
-     * @member {Shader}
+     * @member {PIXI.Shader}
      */
     this.shader = null;
-
 }
 
 SpriteRenderer.prototype = Object.create(ObjectRenderer.prototype);
@@ -177,8 +138,6 @@ SpriteRenderer.prototype.onContextChange = function ()
     this.vertexBuffer = gl.createBuffer();
     this.indexBuffer = gl.createBuffer();
 
-    // 65535 is max index, so 65535 / 6 = 10922.
-
     //upload the index data
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
@@ -192,7 +151,7 @@ SpriteRenderer.prototype.onContextChange = function ()
 /**
  * Renders the sprite object.
  *
- * @param sprite {Sprite} the sprite to render when using this spritebatch
+ * @param sprite {PIXI.Sprite} the sprite to render when using this spritebatch
  */
 SpriteRenderer.prototype.render = function (sprite)
 {
@@ -203,7 +162,6 @@ SpriteRenderer.prototype.render = function (sprite)
     if (this.currentBatchSize >= this.size)
     {
         this.flush();
-        this.currentBaseTexture = texture.baseTexture;
     }
 
     // get the uvs for the texture
@@ -221,9 +179,9 @@ SpriteRenderer.prototype.render = function (sprite)
 
     var w0, w1, h0, h1;
 
-    if (texture.trim)
+    if (texture.trim && sprite.tileScale === undefined)
     {
-        // if the sprite is trimmed then we need to add the extra space before transforming the sprite coords..
+        // if the sprite is trimmed and is not a tilingsprite then we need to add the extra space before transforming the sprite coords..
         var trim = texture.trim;
 
         w1 = trim.x - aX * trim.width;
@@ -258,24 +216,27 @@ SpriteRenderer.prototype.render = function (sprite)
 
     if (this.renderer.roundPixels)
     {
-        // xy
-        positions[index] = a * w1 + c * h1 + tx | 0;
-        positions[index+1] = d * h1 + b * w1 + ty | 0;
+        var resolution = this.renderer.resolution;
 
         // xy
-        positions[index+5] = a * w0 + c * h1 + tx | 0;
-        positions[index+6] = d * h1 + b * w0 + ty | 0;
+        positions[index] = (((a * w1 + c * h1 + tx) * resolution) | 0) / resolution;
+        positions[index+1] = (((d * h1 + b * w1 + ty) * resolution) | 0) / resolution;
+
+        // xy
+        positions[index+5] = (((a * w0 + c * h1 + tx) * resolution) | 0) / resolution;
+        positions[index+6] = (((d * h1 + b * w0 + ty) * resolution) | 0) / resolution;
 
          // xy
-        positions[index+10] = a * w0 + c * h0 + tx | 0;
-        positions[index+11] = d * h0 + b * w0 + ty | 0;
+        positions[index+10] = (((a * w0 + c * h0 + tx) * resolution) | 0) / resolution;
+        positions[index+11] = (((d * h0 + b * w0 + ty) * resolution) | 0) / resolution;
 
         // xy
-        positions[index+15] = a * w1 + c * h0 + tx | 0;
-        positions[index+16] = d * h0 + b * w1 + ty | 0;
+        positions[index+15] = (((a * w1 + c * h0 + tx) * resolution) | 0) / resolution;
+        positions[index+16] = (((d * h0 + b * w1 + ty) * resolution) | 0) / resolution;
     }
     else
     {
+
         // xy
         positions[index] = a * w1 + c * h1 + tx;
         positions[index+1] = d * h1 + b * w1 + ty;
@@ -366,7 +327,7 @@ SpriteRenderer.prototype.flush = function ()
         nextShader = sprite.shader || this.shader;
 
         blendSwap = currentBlendMode !== nextBlendMode;
-        shaderSwap = currentShader !== nextShader; // should I use uuidS???
+        shaderSwap = currentShader !== nextShader; // should I use uidS???
 
         if (currentBaseTexture !== nextTexture || blendSwap || shaderSwap)
         {
@@ -429,7 +390,7 @@ SpriteRenderer.prototype.flush = function ()
  * Draws the currently batches sprites.
  *
  * @private
- * @param texture {Texture}
+ * @param texture {PIXI.Texture}
  * @param size {number}
  * @param startIndex {number}
  */
@@ -494,6 +455,8 @@ SpriteRenderer.prototype.destroy = function ()
     // MJ: Destroy of super class was never called :(
     ObjectRenderer.prototype.destroy.call(this);
 
+    ObjectRenderer.prototype.destroy.call(this);
+
     this.shader.destroy();
 
     this.renderer = null;
@@ -506,13 +469,6 @@ SpriteRenderer.prototype.destroy = function ()
     this.vertexBuffer = null;
     this.indexBuffer = null;
 
-    this.currentBaseTexture = null;
-
-    this.drawing = false;
-
-    this.textures = null;
-    this.blendModes = null;
-    this.shaders = null;
     this.sprites = null;
     this.shader = null;
 };

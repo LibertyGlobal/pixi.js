@@ -2,18 +2,13 @@
  * @file        Main export of the PIXI filters library
  * @author      Mat Groves <mat@goodboydigital.com>
  * @copyright   2013-2015 GoodBoyDigital
- * @license     {@link https://github.com/GoodBoyDigital/pixi.js/blob/master/LICENSE|MIT License}
+ * @license     {@link https://github.com/pixijs/pixi.js/blob/master/LICENSE|MIT License}
  */
 
 /**
  * @namespace PIXI.filters
  */
 module.exports = {
-    // expose some internal filters...
-    AbstractFilter:     require('../core/renderers/webgl/filters/AbstractFilter'),
-    FXAAFilter:         require('../core/renderers/webgl/filters/FXAAFilter'),
-    SpriteMaskFilter:   require('../core/renderers/webgl/filters/SpriteMaskFilter'),
-    // add the rest!
     AsciiFilter:        require('./ascii/AsciiFilter'),
     BloomFilter:        require('./bloom/BloomFilter'),
     BlurFilter:         require('./blur/BlurFilter'),
@@ -30,7 +25,6 @@ module.exports = {
     DropShadowFilter:   require('./dropshadow/DropShadowFilter'),
     InvertFilter:       require('./invert/InvertFilter'),
     NoiseFilter:        require('./noise/NoiseFilter'),
-    NormalMapFilter:    require('./normal/NormalMapFilter'),
     PixelateFilter:     require('./pixelate/PixelateFilter'),
     RGBSplitFilter:     require('./rgb/RGBSplitFilter'),
     ShockwaveFilter:    require('./shockwave/ShockwaveFilter'),

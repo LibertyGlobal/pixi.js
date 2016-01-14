@@ -1,5 +1,4 @@
-var ObjectRenderer = require('../../core/renderers/webgl/utils/ObjectRenderer'),
-    WebGLRenderer = require('../../core/renderers/webgl/WebGLRenderer'),
+var core = require('../../core'),
     Mesh = require('../Mesh');
 
 /**
@@ -19,11 +18,11 @@ var ObjectRenderer = require('../../core/renderers/webgl/utils/ObjectRenderer'),
  * @private
  * @memberof PIXI.mesh
  * @extends PIXI.ObjectRenderer
- * @param renderer {WebGLRenderer} The renderer this sprite batch works for.
+ * @param renderer {PIXI.WebGLRenderer} The renderer this sprite batch works for.
  */
 function MeshRenderer(renderer)
 {
-    ObjectRenderer.call(this, renderer);
+    core.ObjectRenderer.call(this, renderer);
 
 
     /**
@@ -31,6 +30,7 @@ function MeshRenderer(renderer)
      *
      * @member {Uint16Array}
      */
+
     this.indices = new Uint16Array(15000);
 
     //TODO this could be a single buffer shared amongst all renderers as we reuse this set up in most renderers
@@ -43,13 +43,15 @@ function MeshRenderer(renderer)
         this.indices[i + 4] = j + 2;
         this.indices[i + 5] = j + 3;
     }
+
+    this.currentShader = null;
 }
 
-MeshRenderer.prototype = Object.create(ObjectRenderer.prototype);
+MeshRenderer.prototype = Object.create(core.ObjectRenderer.prototype);
 MeshRenderer.prototype.constructor = MeshRenderer;
 module.exports = MeshRenderer;
 
-WebGLRenderer.registerPlugin('mesh', MeshRenderer);
+core.WebGLRenderer.registerPlugin('mesh', MeshRenderer);
 
 /**
  * Sets up the renderer context and necessary buffers.
@@ -65,11 +67,10 @@ MeshRenderer.prototype.onContextChange = function ()
 /**
  * Renders the sprite object.
  *
- * @param mesh {Mesh} the mesh to render
+ * @param mesh {PIXI.mesh.Mesh} the mesh to render
  */
 MeshRenderer.prototype.render = function (mesh)
 {
-//    return;
     if(!mesh._vertexBuffer)
     {
         this._initWebGL(mesh);
@@ -78,18 +79,29 @@ MeshRenderer.prototype.render = function (mesh)
     var renderer = this.renderer,
         gl = renderer.gl,
         texture = mesh._texture.baseTexture,
-        shader = renderer.shaderManager.plugins.meshShader;
+        shader = mesh.shader;// || renderer.shaderManager.plugins.meshShader;
 
     var drawMode = mesh.drawMode === Mesh.DRAW_MODES.TRIANGLE_MESH ? gl.TRIANGLE_STRIP : gl.TRIANGLES;
 
     renderer.blendModeManager.setBlendMode(mesh.blendMode);
 
+    //TODO cache custom state..
+    if (!shader)
+    {
+        shader = renderer.shaderManager.plugins.meshShader;
+    }
+    else
+    {
+        shader = shader.shaders[gl.id] || shader.getShader(renderer);// : shader;
+    }
 
-    // set uniforms
-    gl.uniformMatrix3fv(shader.uniforms.translationMatrix._location, false, mesh.worldTransform.toArray(true));
+    this.renderer.shaderManager.setShader(shader);
 
-    gl.uniformMatrix3fv(shader.uniforms.projectionMatrix._location, false, renderer.currentRenderTarget.projectionMatrix.toArray(true));
-    gl.uniform1f(shader.uniforms.alpha._location, mesh.worldAlpha);
+    shader.uniforms.translationMatrix.value = mesh.worldTransform.toArray(true);
+    shader.uniforms.projectionMatrix.value = renderer.currentRenderTarget.projectionMatrix.toArray(true);
+    shader.uniforms.alpha.value = mesh.worldAlpha;
+
+    shader.syncUniforms();
 
     if (!mesh.dirty)
     {
@@ -155,7 +167,7 @@ MeshRenderer.prototype.render = function (mesh)
 
 /**
  * Prepares all the buffers to render this mesh
- * @param mesh {Mesh} the mesh to render
+ * @param mesh {PIXI.mesh.Mesh} the mesh to render
  */
 MeshRenderer.prototype._initWebGL = function (mesh)
 {
@@ -200,9 +212,9 @@ MeshRenderer.prototype.flush = function ()
  */
 MeshRenderer.prototype.start = function ()
 {
-    var shader = this.renderer.shaderManager.plugins.meshShader;
 
-    this.renderer.shaderManager.setShader(shader);
+
+    this.currentShader = null;
 };
 
 /**
@@ -211,10 +223,5 @@ MeshRenderer.prototype.start = function ()
  */
 MeshRenderer.prototype.destroy = function ()
 {
-    // MJ: Destroy function of super class was never called here as well :(. Also PIXI assumes here that there always is
-    // MeshRenderer. We destroy it at an earlier stage in the PixiSurface since we don't need it, so PIXI needs to check
-    // that the MeshRenderer is still there before killing it.
-    if (this.renderer) {
-        ObjectRenderer.prototype.destroy.call(this);
-    }
+    core.ObjectRenderer.prototype.destroy.call(this);
 };
