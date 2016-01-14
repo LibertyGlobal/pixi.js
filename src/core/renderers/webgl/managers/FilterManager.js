@@ -418,11 +418,6 @@ FilterManager.prototype.capFilterArea = function (filterArea)
  */
 FilterManager.prototype.resize = function ( width, height )
 {
-    this.quad.destroy();
-
-    // MJ: Destroy of super class was never called.
-    WebGLManager.prototype.destroy.call(this);
-
     this.textureSize.width = width;
     this.textureSize.height = height;
 
@@ -439,9 +434,9 @@ FilterManager.prototype.resize = function ( width, height )
 FilterManager.prototype.destroy = function ()
 {
     this.quad.destroy();
-    
+
     WebGLManager.prototype.destroy.call(this);
-    
+
     this.filterStack = null;
     this.offsetY = 0;
 

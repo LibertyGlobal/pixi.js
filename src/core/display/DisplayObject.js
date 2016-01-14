@@ -273,6 +273,7 @@ Object.defineProperties(DisplayObject.prototype, {
 DisplayObject.prototype.updateTransform = function ()
 {
     // create some matrix refs for easy access
+    var pt = null;
     if(this.parent) {
         pt = this.parent.worldTransform;
     }
@@ -364,7 +365,11 @@ DisplayObject.prototype.updateTransform = function ()
     }
 
     // multiply the alphas..
-    this.worldAlpha = this.alpha * this.parent.worldAlpha;
+    if(this.parent) {
+        this.worldAlpha = this.alpha * this.parent.worldAlpha;
+    } else {
+        this.worldAlpha = this.alpha;
+    }
 
     // reset the bounds each time this is called!
     this._currentBounds = null;
